@@ -1,0 +1,20 @@
+# Git Commit Summarizer Requirements
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+requests>=2.31.0
+pytz>=2023.3
+
+# Optional: For better date parsing
+python-dateutil>=2.8.2
+
+# Optional: For colored terminal output
+colorama>=0.4.6
+
+# Optional: For progress bars
+tqdm>=4.66.0
+
+# Development dependencies (optional)
+# pytest>=7.4.0
+# black>=23.0.0
+# flake8>=6.0.0
