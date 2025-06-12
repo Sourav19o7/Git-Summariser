@@ -281,9 +281,9 @@ class GitCommitSummarizer:
                 summary += f" (Kotlin: {', '.join(commit['kotlin_files'][:3])})"
             commit_summaries.append(summary)
 
-        # CHANGED: Updated prompt to focus on high-level technical summary with numbers
+        # CHANGED: Updated prompt to follow structured format with feature headers and technical details
         prompt = f"""
-Analyze these git commits from an Android Kotlin project and provide a HIGH-LEVEL TECHNICAL SUMMARY of the overall work accomplished:
+Analyze these git commits from an Android Kotlin project and provide a STRUCTURED TECHNICAL SUMMARY following this specific format:
 
 COMMITS ANALYZED: {commits_to_analyze} of {len(commits)} total commits
 
@@ -298,24 +298,33 @@ PROJECT STATISTICS:
 - Android-specific files: {analysis['android_files']}
 - File types distribution: {dict(list(analysis['file_types'].items())[:5])}
 
-Provide EXACTLY {self.MAX_BULLET_POINTS} bullet points that summarize the OVERALL TECHNICAL WORK at a HIGH LEVEL:
+Provide EXACTLY {self.MAX_BULLET_POINTS} feature blocks that summarize the work. Each block should follow this EXACT format:
 
-Requirements:
-• Exactly {self.MAX_BULLET_POINTS} bullet points maximum
-• Focus on MAJOR features, components, or architectural changes - not individual bug fixes
-• Include specific numbers (files modified, features added, components built, etc.)
-• Be technical but concise - mention frameworks, patterns, architectures used
-• Group related changes together (e.g., "Implemented user authentication system across 8 files")
-• Prioritize impact: major features > refactoring > bug fixes > minor changes
-• Use format: "• [Technical accomplishment] with [numbers/scope] affecting [components/areas]"
+**Feature/Area Name - Component/Detail** (#branch_or_PR_info)
+- Specific technical change 1 with class/file names and numbers/metrics
+- Specific technical change 2 with implementation details and impact
 
-Examples of good high-level bullets:
-• "Implemented complete user authentication system across 12 Kotlin files with JWT token management and biometric login"
-• "Refactored data layer architecture affecting 15 repository classes, introducing Repository pattern with Room database integration"
-• "Built real-time messaging feature with WebSocket integration across 8 UI components and 5 data models"
+FORMATTING REQUIREMENTS:
+• Exactly {self.MAX_BULLET_POINTS} feature blocks maximum
+• Each block starts with **Bold Header** including feature area and component
+• Include branch name or PR-like identifier in parentheses if available
+• Exactly 2 sub-bullets per block, maximum 3 only when absolutely necessary
+• Group related commits under logical feature areas
+• Include actual class names, file names, and numbers when possible
+• Focus on WHAT was implemented/changed, not just WHERE
+• Keep sub-bullets concise: exactly 2 per block, 3 maximum only when essential
+• Combine multiple related details into single comprehensive sub-bullets
 
-Format as bullet points starting with •
-Focus on WHAT was built/changed, not just WHERE
+EXAMPLE FORMAT:
+**Authentication System - LoginManager** (#feature/auth-overhaul)
+- Implemented JWT token management in AuthRepository with biometric support across 8 Activity files
+- Refactored login flow to MVVM pattern reducing login time by 40% through async validation
+
+**Database Migration - UserProfile** (#hotfix/db-schema)
+- Updated Room database schema from v12 to v13 with migration scripts for 15,000+ existing records
+- Fixed data corruption issues affecting 12% of users with proper foreign key constraints
+
+Group similar commits intelligently and be specific about technical implementation details.
         """.strip()
 
         try:
@@ -328,8 +337,8 @@ Focus on WHAT was built/changed, not just WHERE
                 'model': self.AI_MODEL,
                 'messages': [
                     {
-                        'role': 'system',
-                        'content': f'You are a senior software architect reviewing code changes. Provide exactly {self.MAX_BULLET_POINTS} high-level technical bullet points summarizing major accomplishments, not individual commits. Focus on overall features and architectural changes with specific numbers.'
+                        'role': 'system', 
+                        'content': f'You are a senior software architect writing a technical release summary. Create exactly {self.MAX_BULLET_POINTS} structured feature blocks with bold headers and exactly 2 technical sub-bullets each (maximum 3 only when absolutely necessary). Group related commits by feature area and include specific class names, file counts, and implementation details.'
                     },
                     {
                         'role': 'user',
@@ -379,8 +388,8 @@ Focus on WHAT was built/changed, not just WHERE
         # Count actual commits processed vs total found
         total_found = len(commits) if len(commits) <= self.MAX_COMMITS_TO_ANALYZE else f"{len(commits)}+ (limited to {self.MAX_COMMITS_TO_ANALYZE})"
 
-        # CHANGED: Updated report description to reflect high-level focus
-        report = f"""# 📊 My Git Activity Summary - High-Level Technical Overview
+        # CHANGED: Updated report description to reflect structured format
+        report = f"""# 📊 My Git Activity Summary - Technical Release Notes
 
 **👤 Author:** {user_info['name']} <{user_info['email']}>
 **🕐 Generated:** {timestamp} IST
@@ -393,8 +402,8 @@ Focus on WHAT was built/changed, not just WHERE
 • **Kotlin Files:** {analysis['kotlin_files']}
 • **Branches Touched:** {len(analysis['branches'])}
 
-## 🎯 Major Technical Accomplishments
-*High-level summary of overall work (max {self.MAX_BULLET_POINTS} bullets)*
+## 🚀 Feature Development Summary
+*Structured technical summary ({self.MAX_BULLET_POINTS} feature areas)*
 
 {ai_summary}
 
@@ -418,7 +427,7 @@ Focus on WHAT was built/changed, not just WHERE
             report += "\n"
 
         report += f"---\n*Generated by Git Commit Summarizer at {timestamp} IST*\n"
-        report += f"*Configuration: Max {self.MAX_COMMITS_TO_ANALYZE} commits, {self.MAX_BULLET_POINTS} high-level bullets, {self.MAX_WORDS_PER_BULLET} words each*\n"
+        report += f"*Configuration: Max {self.MAX_COMMITS_TO_ANALYZE} commits, {self.MAX_BULLET_POINTS} feature blocks, structured format*\n"
         report += f"*Log file: {self.log_file}*"
 
         return report
@@ -441,7 +450,7 @@ Focus on WHAT was built/changed, not just WHERE
     def run_analysis(self, hours_back: int = 24, save_to_file: bool = True, verbose: bool = True) -> str:
         """Run the complete analysis and return the report."""
         if verbose:
-            self.log_message("🚀 Git Commit Summarizer - High-Level Technical Analysis of MY changes")
+            self.log_message("🚀 Git Commit Summarizer - Structured Technical Release Notes")
             self.log_message("=" * 60)
 
         # Check git repository
@@ -465,7 +474,7 @@ Focus on WHAT was built/changed, not just WHERE
         self.log_message(f"📊 Analysis: {analysis['total_commits']} commits, {analysis['kotlin_files']} Kotlin files, {len(analysis['branches'])} branches")
 
         # Generate AI bullet summary
-        self.log_message("🤖 Generating high-level technical summary...")
+        self.log_message("🤖 Generating structured technical feature summary...")
         ai_summary = self.generate_bullet_summary(commits, analysis)
 
         # Generate report
@@ -509,7 +518,7 @@ def schedule_for_2_30_am():
 
 def main():
     """Main function with command line argument parsing."""
-    parser = argparse.ArgumentParser(description='Git Commit Summarizer - High-level technical summary of MY changes')
+    parser = argparse.ArgumentParser(description='Git Commit Summarizer - Structured technical release notes for MY changes')
     parser.add_argument('--hours', type=int, default=24, help='Hours back to analyze (default: 24)')
     parser.add_argument('--no-save', action='store_true', help='Don\'t save report to file')
     parser.add_argument('--quiet', action='store_true', help='Quiet mode - minimal output')
@@ -537,7 +546,7 @@ def main():
         # Print report if not in quiet mode
         if not args.quiet:
             print("\n" + "=" * 60)
-            print("📄 HIGH-LEVEL TECHNICAL SUMMARY:")
+            print("📄 STRUCTURED TECHNICAL SUMMARY:")
             print("=" * 60)
             print(report)
 
