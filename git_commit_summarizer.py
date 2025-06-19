@@ -18,8 +18,8 @@ import time
 class GitCommitSummarizer:
     # Configuration variables - easily customizable
     MAX_COMMITS_TO_ANALYZE = 50      # Maximum commits to process
-    MAX_BULLET_POINTS = 6            # CHANGED: Reduced from 30 to 6 for high-level summary
-    MAX_WORDS_PER_BULLET = 100       # CHANGED: Increased from 70 to 100 to allow more detailed technical descriptions
+    MAX_BULLET_POINTS = 6            # Number of main summary points
+    MAX_WORDS_PER_BULLET = 20           # CHANGED: Reduced for concise, direct summaries
     AI_MODEL = "gpt-3.5-turbo"       # OpenAI model to use
     MAX_TOKENS = 800                 # Maximum tokens for AI response
     AI_TEMPERATURE = 0.3             # AI response creativity (0.0-1.0)
@@ -143,12 +143,12 @@ class GitCommitSummarizer:
 
                 # Get commits for this branch
                 commit_command = [
-                    'git', 'log', branch,
-                    f'--since={since_time}',
-                    '--pretty=format:%H|%an|%ae|%ad|%s|%D',
-                    '--date=iso',
-                    '--no-merges'
-                ] + author_filters
+                                     'git', 'log', branch,
+                                     f'--since={since_time}',
+                                     '--pretty=format:%H|%an|%ae|%ad|%s|%D',
+                                     '--date=iso',
+                                     '--no-merges'
+                                 ] + author_filters
 
                 commit_lines = self.execute_git_command(commit_command)
 
@@ -167,8 +167,8 @@ class GitCommitSummarizer:
                             author_email = parts[2]
 
                             is_my_commit = (
-                                (user_info['name'] and user_info['name'].lower() in author_name.lower()) or
-                                (user_info['email'] and user_info['email'].lower() in author_email.lower())
+                                    (user_info['name'] and user_info['name'].lower() in author_name.lower()) or
+                                    (user_info['email'] and user_info['email'].lower() in author_email.lower())
                             )
 
                             if not is_my_commit:
@@ -263,8 +263,7 @@ class GitCommitSummarizer:
         }
 
     def generate_bullet_summary(self, commits: List[Dict], analysis: Dict) -> str:
-        """Generate AI-powered bullet point summary using cheaper GPT model."""
-        # CHANGED: Updated to focus on high-level technical summary
+        """Generate AI-powered bullet point summary focused on concise work accomplishments."""
         if not commits:
             return "• No commits found in the specified time period by you."
 
@@ -281,9 +280,9 @@ class GitCommitSummarizer:
                 summary += f" (Kotlin: {', '.join(commit['kotlin_files'][:3])})"
             commit_summaries.append(summary)
 
-        # CHANGED: Updated prompt to follow structured format with feature headers and technical details
+        # UPDATED: New prompt focused on concise high-level work accomplishments
         prompt = f"""
-Analyze these git commits from an Android Kotlin project and provide a STRUCTURED TECHNICAL SUMMARY following this specific format:
+Analyze these git commits from an Android Kotlin project and provide a CONCISE HIGH-LEVEL WORK SUMMARY.
 
 COMMITS ANALYZED: {commits_to_analyze} of {len(commits)} total commits
 
@@ -296,35 +295,39 @@ PROJECT STATISTICS:
 - Total files modified: {analysis['total_files']}
 - Kotlin files modified: {analysis['kotlin_files']}
 - Android-specific files: {analysis['android_files']}
-- File types distribution: {dict(list(analysis['file_types'].items())[:5])}
 
-Provide EXACTLY {self.MAX_BULLET_POINTS} feature blocks that summarize the work. Each block should follow this EXACT format:
+Provide EXACTLY {self.MAX_BULLET_POINTS} concise bullet points that summarize what was accomplished.
 
-**Feature/Area Name - Component/Detail** (#branch_or_PR_info)
-- Specific technical change 1 with class/file names and numbers/metrics
-- Specific technical change 2 with implementation details and impact
+FOCUS ON:
+• Core functionality added or improved
+• User experience changes
+• Performance or reliability improvements  
+• Security or data handling updates
+• Testing or code quality work
 
-FORMATTING REQUIREMENTS:
-• Exactly {self.MAX_BULLET_POINTS} feature blocks maximum
-• Each block starts with **Bold Header** including feature area and component
-• Include branch name or PR-like identifier in parentheses if available
-• Exactly 2 sub-bullets per block, maximum 3 only when absolutely necessary
-• Group related commits under logical feature areas
-• Include actual class names, file names, and numbers when possible
-• Focus on WHAT was implemented/changed, not just WHERE
-• Keep sub-bullets concise: exactly 2 per block, 3 maximum only when essential
-• Combine multiple related details into single comprehensive sub-bullets
+AVOID:
+• Specific file names or technical implementation details
+• Flowery language or marketing terms
+• Percentage improvements unless clearly measurable
+• Overly technical jargon
+• Boastful or promotional language
 
-EXAMPLE FORMAT:
-**Authentication System - LoginManager** (#feature/auth-overhaul)
-- Implemented JWT token management in AuthRepository with biometric support across 8 Activity files
-- Refactored login flow to MVVM pattern reducing login time by 40% through async validation
+TONE AND STYLE:
+• Direct and factual
+• Short and to the point
+• Professional but not promotional
+• Focus on WHAT was done, not how amazing it is
+• Maximum 20 words per bullet point
 
-**Database Migration - UserProfile** (#hotfix/db-schema)
-- Updated Room database schema from v12 to v13 with migration scripts for 15,000+ existing records
-- Fixed data corruption issues affecting 12% of users with proper foreign key constraints
+EXAMPLE FORMAT (Concise and Direct):
+• Added biometric authentication to login flow
+• Optimized data loading for faster app startup
+• Fixed offline sync issues affecting user data
+• Updated UI components to Material Design 3
+• Added automated tests for payment processing
+• Improved error handling in network requests
 
-Group similar commits intelligently and be specific about technical implementation details.
+Keep it simple, direct, and factual. Avoid superlatives and promotional language.
         """.strip()
 
         try:
@@ -337,8 +340,8 @@ Group similar commits intelligently and be specific about technical implementati
                 'model': self.AI_MODEL,
                 'messages': [
                     {
-                        'role': 'system', 
-                        'content': f'You are a senior software architect writing a technical release summary. Create exactly {self.MAX_BULLET_POINTS} structured feature blocks with bold headers and exactly 2 technical sub-bullets each (maximum 3 only when absolutely necessary). Group related commits by feature area and include specific class names, file counts, and implementation details.'
+                        'role': 'system',
+                        'content': f'You are a developer creating a concise work summary. Generate exactly {self.MAX_BULLET_POINTS} short, direct bullet points about what was accomplished. Be factual and to the point. Avoid promotional language, superlatives, and boastful tone. Maximum 20 words per bullet point.'
                     },
                     {
                         'role': 'user',
@@ -381,53 +384,46 @@ Group similar commits intelligently and be specific about technical implementati
             return f"• AI summary failed: {e}"
 
     def generate_report(self, commits: List[Dict], analysis: Dict, ai_summary: str, hours_back: int) -> str:
-        """Generate a concise report focused on bullet points."""
+        """Generate a concise report focused on high-level business accomplishments."""
         user_info = self.get_git_user_info()
         timestamp = self.get_ist_time()
 
         # Count actual commits processed vs total found
         total_found = len(commits) if len(commits) <= self.MAX_COMMITS_TO_ANALYZE else f"{len(commits)}+ (limited to {self.MAX_COMMITS_TO_ANALYZE})"
 
-        # CHANGED: Updated report description to reflect structured format
-        report = f"""# 📊 My Git Activity Summary - Technical Release Notes
+        # UPDATED: Report description reflects concise work focus
+        report = f"""# 📊 Work Summary - Development Activity
 
-**👤 Author:** {user_info['name']} <{user_info['email']}>
+**👤 Developer:** {user_info['name']} <{user_info['email']}>
 **🕐 Generated:** {timestamp} IST
 **📅 Period:** Last {hours_back} hours
 **🌿 Branches:** {', '.join(analysis['branches'][:5])}{'...' if len(analysis['branches']) > 5 else ''}
 
-## 📈 Quick Stats
-• **My Commits:** {analysis['total_commits']} (analyzing up to {self.MAX_COMMITS_TO_ANALYZE})
+## 📈 Development Metrics
+• **Commits:** {analysis['total_commits']} (analyzing up to {self.MAX_COMMITS_TO_ANALYZE})
 • **Files Modified:** {analysis['total_files']}
 • **Kotlin Files:** {analysis['kotlin_files']}
-• **Branches Touched:** {len(analysis['branches'])}
+• **Branches:** {len(analysis['branches'])}
 
-## 🚀 Feature Development Summary
-*Structured technical summary ({self.MAX_BULLET_POINTS} feature areas)*
+## ✅ Work Completed
 
 {ai_summary}
 
 """
 
-        if analysis['kotlin_file_list']:
-            report += "## 🔧 Kotlin Files I Modified\n"
-            for kt_file in sorted(analysis['kotlin_file_list'][:15]):  # Show top 15
-                report += f"• `{kt_file}`\n"
-            if len(analysis['kotlin_file_list']) > 15:
-                report += f"• ... and {len(analysis['kotlin_file_list']) - 15} more Kotlin files\n"
-            report += "\n"
-
         if commits:
-            report += "## 📝 My Recent Commits\n"
-            commits_to_show = min(len(commits), 10)  # Show max 10 commits
+            report += "## 📝 Recent Commits\n"
+            commits_to_show = min(len(commits), 5)
             for i, commit in enumerate(commits[:commits_to_show], 1):
-                report += f"{i}. **{commit['hash']}** [{commit['branch']}] {commit['message']}\n"
+                message = commit['message']
+                if len(message) > 60:
+                    message = message[:57] + "..."
+                report += f"{i}. **[{commit['branch']}]** {message}\n"
             if len(commits) > commits_to_show:
                 report += f"   ... and {len(commits) - commits_to_show} more commits\n"
             report += "\n"
 
-        report += f"---\n*Generated by Git Commit Summarizer at {timestamp} IST*\n"
-        report += f"*Configuration: Max {self.MAX_COMMITS_TO_ANALYZE} commits, {self.MAX_BULLET_POINTS} feature blocks, structured format*\n"
+        report += f"---\n*Generated at {timestamp} IST*\n"
         report += f"*Log file: {self.log_file}*"
 
         return report
@@ -436,7 +432,7 @@ Group similar commits intelligently and be specific about technical implementati
         """Save the report to a file."""
         if not filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"my_git_summary_{timestamp}.md"
+            filename = f"work_summary_{timestamp}.md"
 
         try:
             with open(filename, 'w', encoding='utf-8') as f:
@@ -450,7 +446,7 @@ Group similar commits intelligently and be specific about technical implementati
     def run_analysis(self, hours_back: int = 24, save_to_file: bool = True, verbose: bool = True) -> str:
         """Run the complete analysis and return the report."""
         if verbose:
-            self.log_message("🚀 Git Commit Summarizer - Structured Technical Release Notes")
+            self.log_message("🚀 Work Summarizer - Development Activity Analysis")
             self.log_message("=" * 60)
 
         # Check git repository
@@ -459,13 +455,13 @@ Group similar commits intelligently and be specific about technical implementati
             self.log_message(error_msg, "ERROR")
             return error_msg
 
-        self.log_message(f"🔍 Analyzing MY commits from the last {hours_back} hours across all branches...")
+        self.log_message(f"🔍 Analyzing work from the last {hours_back} hours across all branches...")
 
         # Get my commits from all branches
         commits = self.get_my_commits_from_all_branches(hours_back)
 
         if not commits:
-            no_commits_msg = f"No commits by you found in the last {hours_back} hours across any branch."
+            no_commits_msg = f"No development activity found in the last {hours_back} hours across any branch."
             self.log_message(no_commits_msg, "INFO")
             return no_commits_msg
 
@@ -474,7 +470,7 @@ Group similar commits intelligently and be specific about technical implementati
         self.log_message(f"📊 Analysis: {analysis['total_commits']} commits, {analysis['kotlin_files']} Kotlin files, {len(analysis['branches'])} branches")
 
         # Generate AI bullet summary
-        self.log_message("🤖 Generating structured technical feature summary...")
+        self.log_message("🤖 Generating work summary...")
         ai_summary = self.generate_bullet_summary(commits, analysis)
 
         # Generate report
@@ -518,7 +514,7 @@ def schedule_for_2_30_am():
 
 def main():
     """Main function with command line argument parsing."""
-    parser = argparse.ArgumentParser(description='Git Commit Summarizer - Structured technical release notes for MY changes')
+    parser = argparse.ArgumentParser(description='Work Summarizer - Concise development activity analysis')
     parser.add_argument('--hours', type=int, default=24, help='Hours back to analyze (default: 24)')
     parser.add_argument('--no-save', action='store_true', help='Don\'t save report to file')
     parser.add_argument('--quiet', action='store_true', help='Quiet mode - minimal output')
@@ -546,7 +542,7 @@ def main():
         # Print report if not in quiet mode
         if not args.quiet:
             print("\n" + "=" * 60)
-            print("📄 STRUCTURED TECHNICAL SUMMARY:")
+            print("📄 WORK SUMMARY:")
             print("=" * 60)
             print(report)
 
